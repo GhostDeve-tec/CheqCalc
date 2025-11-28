@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CheqCalc - Calculadora de Juros</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .card {
+            border-radius: 15px;
+            border: none;
+            background: rgba(255, 255, 255, 0.95);
+        }
+        .card-header {
+            border-radius: 15px 15px 0 0 !important;
+            border-bottom: none;
+        }
+        .table th {
+            border-top: none;
+            font-weight: 600;
+        }
+        .form-control {
+            border-radius: 8px;
+            border: 2px solid #e9ecef;
+            transition: all 0.3s ease;
+        }
+        .form-control:focus {
+            border-color: #3498db;
+            box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.25);
+        }
+        .btn {
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        .btn-success {
+            background: linear-gradient(45deg, #27ae60, #2ecc71);
+            border: none;
+        }
+        .btn-primary {
+            background: linear-gradient(45deg, #3498db, #2980b9);
+            border: none;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+        @media (max-width: 768px) {
+            .table-responsive {
+                font-size: 0.8rem;
+            }
+            .btn-lg {
+                font-size: 0.9rem;
+                padding: 0.5rem 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="bg-primary text-white shadow-sm">
+        <nav class="navbar navbar-dark bg-primary">
+            <div class="container">
+                <a class="navbar-brand fw-bold" href="#">
+                    <i class="fas fa-calculator me-2"></i>CheqCalc
+                </a>
+            </div>
+        </nav>
+    </header>
+
+    <div class="container my-4">
+        <div class="row justify-content-center">
+            <div class="col-lg-10">
+                <div class="card shadow-lg border-0">
+                    <div class="card-header bg-primary text-white py-3">
+                        <h2 class="h4 mb-0 text-center">
+                            <i class="fas fa-calculator me-2"></i>Calculadora de Juros de Cheques
+                        </h2>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="table-responsive">
+                            <table class="table table-hover" id="chequesTable">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th width="25%">Valor do Cheque (R$)</th>
+                                        <th width="20%">Dias</th>
+                                        <th width="20%">Juros (%)</th>
+                                        <th width="17%">Valor dos Juros</th>
+                                        <th width="16%">Valor Líquido</th>
+                                        <th width="2%"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="chequesBody">
+                                    <!-- Linhas serão adicionadas aqui -->
+                                </tbody>
+                                <tfoot class="table-secondary fw-bold">
+                                    <tr>
+                                        <td colspan="3" class="text-end">TOTAIS:</td>
+                                        <td id="totalJuros" class="text-success">R$ 0,00</td>
+                                        <td id="totalLiquido" class="text-success">R$ 0,00</td>
+                                        <td></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+
+                        <div class="d-flex gap-2 flex-wrap mt-4">
+                            <button type="button" id="btnAdicionar" class="btn btn-success btn-lg">
+                                <i class="fas fa-plus me-2"></i>Adicionar Linha
+                            </button>
+                            <button type="button" id="btnCalcular" class="btn btn-primary btn-lg">
+                                <i class="fas fa-calculator me-2"></i>Calcular Todos
+                            </button>
+                            <button type="button" id="btnLimpar" class="btn btn-outline-danger btn-lg">
+                                <i class="fas fa-trash me-2"></i>Limpar Tudo
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="bg-dark text-white py-3 mt-5">
+        <div class="container text-center">
+            <small>&copy; 2024 CheqCalc - Calculadora de Juros</small>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Função para formatar como moeda brasileira
+        function formatarMoeda(valor) {
+            return 'R$ ' + valor.toLocaleString('pt-BR', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+        }
+
+        // Função para converter moeda para número
+        function moedaParaNumero(moeda) {
+            if (!moeda) return 0;
+            return parseFloat(moeda.replace('R$', '').replace(/\./g, '').replace(',', '.').trim()) || 0;
+        }
+
+        // Formatador de moeda dinâmico
+        function formatarMoedaDinamica(input) {
+            let value = input.value.replace(/\D/g, '');
+            
+            // Remove zeros à esquerda
+            value = value.replace(/^0+/, '');
+            if (value === '') value = '0';
+            
+            // Garante que tenha pelo menos 3 dígitos para os centavos
+            while (value.length < 3) {
+                value = '0' + value;
+            }
+            
+            const cents = value.slice(-2);
+            let integers = value.slice(0, -2);
+            
+            if (integers === '') {
+                integers = '0';
+            } else {
+                // Formata os inteiros com separadores de milhar
+                integers = parseInt(integers).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+            }
+            
+            input.value = integers + ',' + cents;
+        }
+
+        // Remove zeros à esquerda em campos numéricos
+        function removerZeroEsquerda(input) {
+            let value = input.value;
+            if (value === '0') return;
+            value = value.replace(/^0+/, '');
+            if (value === '') value = '0';
+            input.value = value;
+        }
+
+        // Calcular linha individual
+        function calcularLinha(linha) {
+            const inputValor = linha.querySelector('.valor-cheque');
+            const inputDias = linha.querySelector('.dias');
+            const inputJuros = linha.querySelector('.juros');
+            const spanJuros = linha.querySelector('.valor-juros');
+            const spanLiquido = linha.querySelector('.valor-liquido');
+
+            const valor = moedaParaNumero(inputValor.value);
+            const dias = parseInt(inputDias.value) || 0;
+            const juros = parseFloat(inputJuros.value) || 0;
+
+            if (valor > 0) {
+                const valorJuros = valor * (juros / 100) * (dias / 30);
+                const valorLiquido = valor - valorJuros;
+
+                spanJuros.textContent = formatarMoeda(valorJuros);
+                spanLiquido.textContent = formatarMoeda(valorLiquido);
+            } else {
+                spanJuros.textContent = 'R$ 0,00';
+                spanLiquido.textContent = 'R$ 0,00';
+            }
+        }
+
+        // Calcular totais
+        function calcularTotais() {
+            let totalJuros = 0;
+            let totalLiquido = 0;
+
+            document.querySelectorAll('.linha-cheque').forEach(linha => {
+                const valorJuros = moedaParaNumero(linha.querySelector('.valor-juros').textContent);
+                const valorLiquido = moedaParaNumero(linha.querySelector('.valor-liquido').textContent);
+
+                totalJuros += valorJuros;
+                totalLiquido += valorLiquido;
+            });
+
+            document.getElementById('totalJuros').textContent = formatarMoeda(totalJuros);
+            document.getElementById('totalLiquido').textContent = formatarMoeda(totalLiquido);
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            let linhaCount = 0;
+
+            // Adicionar nova linha
+            document.getElementById('btnAdicionar').addEventListener('click', function() {
+                const tbody = document.getElementById('chequesBody');
+                const novaLinha = document.createElement('tr');
+                novaLinha.className = 'linha-cheque';
+                novaLinha.innerHTML = `
+                    <td>
+                        <input type="text" class="form-control valor-cheque" 
+                               placeholder="0,00" value="0,00"
+                               oninput="formatarMoedaDinamica(this)">
+                    </td>
+                    <td>
+                        <input type="number" class="form-control dias" 
+                               min="0" max="365" value="0" placeholder="Dias"
+                               oninput="removerZeroEsquerda(this)">
+                    </td>
+                    <td>
+                        <input type="number" class="form-control juros" 
+                               step="0.01" min="0" max="100" value="0" placeholder="0.00%"
+                               oninput="removerZeroEsquerda(this)">
+                    </td>
+                    <td>
+                        <span class="valor-juros text-danger fw-bold">R$ 0,00</span>
+                    </td>
+                    <td>
+                        <span class="valor-liquido text-success fw-bold">R$ 0,00</span>
+                    </td>
+                    <td>
+                        <button type="button" class="btn btn-sm btn-outline-danger btn-remover">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(novaLinha);
+
+                // Adicionar eventos para a nova linha
+                const inputs = novaLinha.querySelectorAll('input');
+                inputs.forEach(input => {
+                    input.addEventListener('input', function() {
+                        calcularLinha(novaLinha);
+                        calcularTotais();
+                    });
+                });
+
+                novaLinha.querySelector('.btn-remover').addEventListener('click', function() {
+                    if (document.querySelectorAll('.linha-cheque').length > 1) {
+                        novaLinha.remove();
+                        calcularTotais();
+                    } else {
+                        alert('É necessário ter pelo menos uma linha!');
+                    }
+                });
+            });
+
+            // Calcular todos
+            document.getElementById('btnCalcular').addEventListener('click', function() {
+                document.querySelectorAll('.linha-cheque').forEach(linha => {
+                    calcularLinha(linha);
+                });
+                calcularTotais();
+            });
+
+            // Limpar tudo
+            document.getElementById('btnLimpar').addEventListener('click', function() {
+                if (confirm('Tem certeza que deseja limpar todos os dados?')) {
+                    document.getElementById('chequesBody').innerHTML = '';
+                    document.getElementById('totalJuros').textContent = 'R$ 0,00';
+                    document.getElementById('totalLiquido').textContent = 'R$ 0,00';
+                    // Adiciona uma linha inicial
+                    document.getElementById('btnAdicionar').click();
+                }
+            });
+
+            // Eventos para inputs existentes
+            document.addEventListener('input', function(e) {
+                if (e.target.classList.contains('valor-cheque') || 
+                    e.target.classList.contains('dias') || 
+                    e.target.classList.contains('juros')) {
+                    const linha = e.target.closest('.linha-cheque');
+                    if (linha) {
+                        calcularLinha(linha);
+                        calcularTotais();
+                    }
+                }
+            });
+
+            // Evento para botões de remover
+            document.addEventListener('click', function(e) {
+                if (e.target.classList.contains('btn-remover') || 
+                    e.target.closest('.btn-remover')) {
+                    const btn = e.target.classList.contains('btn-remover') ? e.target : e.target.closest('.btn-remover');
+                    const linha = btn.closest('.linha-cheque');
+                    
+                    if (document.querySelectorAll('.linha-cheque').length > 1) {
+                        linha.remove();
+                        calcularTotais();
+                    } else {
+                        alert('É necessário ter pelo menos uma linha!');
+                    }
+                }
+            });
+
+            // Inicializar com uma linha
+            document.getElementById('btnAdicionar').click();
+        });
+    </script>
+</body>
+</html>
